@@ -1,7 +1,7 @@
  // algo1-1.cpp 计算1-1/x+1/x*x…
  #include<stdio.h>
  #include<sys/timeb.h>
- void main()
+ int main()
  {
    timeb t1,t2;
    long t;
