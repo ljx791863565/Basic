@@ -1,4 +1,5 @@
 #include "sqlist.h"
+#include <iostream>
 
 Status InitList(SqList &L) // 算法2.3
  { // 操作结果：构造一个空的顺序线性表
@@ -138,7 +139,7 @@ Status InitList(SqList &L) // 算法2.3
    return OK;
  }
 
- Status ListTraverse(SqList L,void(*vi)(ElemType&))
+ Status ListTraverse(SqList &L,void(*visit)(ElemType&))
  { // 初始条件：顺序线性表L已存在
    // 操作结果：依次对L的每个数据元素调用函数vi()。一旦vi()失败，则操作失败
    //           vi()的形参加'&'，表明可通过调用vi()改变元素的值
@@ -146,7 +147,7 @@ Status InitList(SqList &L) // 算法2.3
    int i;
    p=L.elem;
    for(i=1;i<=L.length;i++)
-     vi(*p++);
-   cout<<endl;
+     visit(*p++);
+   std::cout<<std::endl;
    return OK;
  }
