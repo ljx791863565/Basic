@@ -10,6 +10,9 @@ void check()
 		fgets(ch, 80, stdin);
 		p = ch;
 		while (*p) {
+			/*
+			 * 当遇到左符号 将其压入栈中
+			 */
 			switch(*p)
 			{
 				case '(' :
@@ -18,6 +21,12 @@ void check()
 				case '<' :
 					Push(s, *p++);
 					break;
+			/*
+			 * 当遇到右符号 弹出当前栈顶元素并匹配
+			 * 如果不是一对的符号 说明失败
+			 * 如果是一对 抵消掉继续下一个 p++ 
+			 * 如果到最后发现有一个栈顶元素弹出并匹配不上 说明少了一对符号中的一个
+			 */
 				case ')' :
 				case ']' :
 				case '}' :
@@ -44,11 +53,11 @@ void check()
 					p++;
 			}
 
-			if (StackEmpty(s)) {
-				printf("symbol OK\n");
-			}else {
-				printf("loss right symbol\n");
-			}
+		}
+		if (StackEmpty(s)) {
+			printf("symbol OK\n");
+		}else {
+			printf("loss right symbol\n");
 		}
 
 	}
