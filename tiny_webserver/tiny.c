@@ -1,4 +1,6 @@
 #include "csapp.h"
+#include "rio.h"
+#define HTMLNAME "home.html"
 
 void get_filetype(char *filename, char *filetype)
 {
@@ -53,6 +55,7 @@ void serve_dynamic(int fd, char *filename, char *cgiargs)
 	Wait(NULL);
 }
 
+//http回复body封装 回复内容buf封装
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg)
 {
 	char buf[MAXLINE], body[MAXLINE];
@@ -71,18 +74,24 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
 	Rio_writen(fd, body, strlen(body));
 }
 
+//解析获得的http uri
 int parse_uri(char *uri, char *filename, char *cgiargs)
 {
 	char *ptr;
+	//static html
+	//uri为'/'
 	if (!strstr(uri, "cgi-bin")) {
 		strcpy(cgiargs, "");
 		strcpy(filename, ".");
 		strcat(filename, uri);
 		if (uri[strlen(uri) -1] == '/') {
-			strcat(filename, "homr.html");
+			strcat(filename, HTMLNAME);
 		}
 		return 1;
 	}else {
+		//char * index(const char *s, int c);
+		//index()用来找出参数s 字符串中第一个出现的参数c 地址，然后将该字符出现的地址返回。字符串结束字符(NULL)也视为字符串一部分
+		//返回值：如果找到指定的字符则返回该字符所在地址，否则返回0.
 		ptr = index(uri, '?');
 		if (ptr) {
 			strcpy(cgiargs, ptr+1);
@@ -96,14 +105,16 @@ int parse_uri(char *uri, char *filename, char *cgiargs)
 	}
 }
 
+// 读取并打印http请求信息
 void read_requesthdrs(rio_t *pr)
 {
 	char buf[MAXLINE];
 	Rio_readlineb(pr, buf, MAXLINE);
-	printf("%s ", buf);
+	printf("(%s:%d) %s ", __FILE__, __LINE__, buf);
+	//如果此时buf中没有\r\n结束符表示还有信息未读取完 继续调用readlineb()
 	while (strcmp(buf, "\r\n")) {
 		Rio_readlineb(pr, buf, MAXLINE);
-		printf("%s ", buf);
+		printf("(%s:%d) %s ", __FILE__, __LINE__, buf);
 	}
 	return ;
 }
@@ -116,12 +127,14 @@ void doit(int fd)
 	char filename[MAXLINE], cgiargs[MAXLINE];
 	rio_t rio;
 
+	//将请求读入到rio中
 	Rio_readinitb(&rio, fd);
 	if (!Rio_readlineb(&rio, buf, MAXLINE)) {
 		return;
 	}
-	printf("%s", buf);
+	printf("(%s:%d) %s",__FILE__, __LINE__, buf);
 	sscanf(buf, "%s %s %s", method, uri, version);
+//	printf("method: %s uri: %s version: %s", method, uri, version);
 	if (strcasecmp(method, "GET")) {
 		clienterror(fd, method, "501", "Not Implemented", "Tiny does not implement this method");
 		return;
@@ -129,6 +142,7 @@ void doit(int fd)
 	read_requesthdrs(&rio);
 
 	is_static = parse_uri(uri, filename,cgiargs);
+	//can not get the filename stat info
 	if (stat(filename, &sbuf) < 0) {
 		clienterror(fd, filename, "404", "Not found", "Tiny couldn't find this file");
 		return;
@@ -154,13 +168,31 @@ int main(int argc, const char *argv[])
 	int listenfd, connfd;
 	char hostname[MAXLINE], port[MAXLINE];
 	socklen_t clientlen;
+	/*
+	 * 通用结构体 128字节
+	 *  #if ULONG_MAX > 0xffffffff
+	 *  # define __ss_aligntype __uint64_t
+	 *  #else
+	 *  # define __ss_aligntype __uint32_t
+	 *  #endif
+	 *  #define _SS_SIZE        128
+	 *  #define _SS_PADSIZE     (_SS_SIZE - (2 * sizeof (__ss_aligntype)))
+	 *  struct sockaddr_storage
+	 *  {
+	 *  sa_family_t ss_family;      // Address family 
+	 *  __ss_aligntype __ss_align;  // Force desired alignment.  
+	 *  char __ss_padding[_SS_PADSIZE];
+	 *  };
+	 */
+	
 	struct sockaddr_storage clientaddr;
 
 	if (argc != 2) {
 		fprintf(stderr, "usage: %s <port>\n", argv[0]);
 		exit(0);
 	}
-
+	
+	//通过传入port到getaddrinfo获得listenfd。 并且对此fd bing() listen()
 	listenfd = Open_listenfd(argv[1]);
 
 	while (1) {

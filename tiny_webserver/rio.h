@@ -1,12 +1,19 @@
 #ifndef __RIO_H__
 #define __RIO_H__
+
+#include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
-#include <string.h>
-#include <stdlib.h>
-
+#include "err.h"
 #define RIO_BUFSIZE 8192
-
+/*
+extern void unix_error(char *msg);
+extern void posix_error(int code, char *msg);
+extern void dns_error(char *msg);
+extern void gai_error(int code, char *msg);
+extern void app_error(char *msg);
+*/
 typedef struct sockaddr SA;
 
 /*
@@ -42,4 +49,10 @@ void rio_readinitb(rio_t *rp, int fd);
 ssize_t rio_readlineb(rio_t *rp, void *buf, size_t n);
 ssize_t rio_readnb(rio_t *rp, void *buf, size_t n);
 
+//rio wappers
+ssize_t Rio_readn(int fd, void *buf, size_t n);
+void Rio_writen(int fd, void *buf, size_t n);
+void Rio_readinitb(rio_t *rp, int fd);
+ssize_t Rio_readlineb(rio_t *rp, void *buf, size_t n);
+ssize_t Rio_readnb(rio_t *rp, void *buf, size_t n);
 #endif

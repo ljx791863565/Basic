@@ -30,6 +30,7 @@ void app_error(char *msg)
 	exit(0);
 }
 
+
 pid_t Fork()
 {
 	pid_t pid;
@@ -770,16 +771,83 @@ void Connect(int sockfd, struct sockaddr *addr, int addrlen)
 }
 
 /*
+ * getaddrinfo解决了把主机名和服务名转换成套接口地址结构的问题。
+ * getaddrinfo函数能够处理名字到地址以及服务到端口这两种转换，返回的是一个addrinfo的结构（列表）指针而不是一个地址清单。
+ * 这些addrinfo结构随后可由套接口函数直接使用。如此以来，getaddrinfo函数把协议相关性安全隐藏在这个库函数内部。
+ * 应用程序只要处理由getaddrinfo函数填写的套接口地址结构
+ * #include <netdb.h>
+ *
+ * struct addrinfo {
+ *	int ai_flags;
+ *	int ai_family;
+ *	int ai_socktype;
+ *	int ai_protocol;
+ *	socklen_t ai_addrlen;
+ *	struct sockaddr *ai_addr;
+ *	char *ai_canonname;
+ *	struct addrinfo *ai_next;
+ *	};
+ *
+ *	ai_flags: 用来指定如何处理地址和名字，可取得值如下 各值可|相或
+ *	+===================+=======================================================+
+ *	|	标志			|		描述											|
+ *	+===================+=======================================================+
+ *	|	AI_ADDRCONFIG	|	查询配置地址类型(IPV4, IPV6)						|
+ *	+-------------------+-------------------------------------------------------+
+ *	|	AI_ALL			|	查找IPV4和IPV6地址 (仅用于AI_V4MAPPED)				|
+ *	+-------------------+-------------------------------------------------------+
+ *	|	AI_CANONNAME	|	需要一个规范名(而不是别名)							|
+ *	+-------------------+-------------------------------------------------------+
+ *	|	AI_NUMERICHOST	|	以数字格式返回主机地址								|
+ *	+-------------------+-------------------------------------------------------+
+ *	|	AI_NUMERICSERV	|	以端口号返回服务									|
+ *	+-------------------+-------------------------------------------------------+
+ *	|	AI_PASSIVE		|	套接字地址用于监听绑定								|
+ *	+-------------------+-------------------------------------------------------+
+ *	|	AI_V4MAPPED		|	如果没有找到IPV6地址 则返回映射到IPV6格式的IPV4地址	|
+ *	+===================+=======================================================+
+ *
+ *	ai_family: 地址族，可取的值有AF_INET(IPv4) AF_INET6(IPv6) AF_UNIX(UNIX域) AF_UNSPEC(未指定)
+ *	
+ *	ai_socktype: socket的类型，主要有SOCK_STREAM(流)和SOCK_DGRAM(数据报)两种
+ *	SOCK_SEQPACLKET (长度固定 有序 可靠的面向连接报文传递)
+ *	SOCK_RAW(IP协议的数据报接口)
+ *
+ *	ai_protocol：socket协议参数
+ *	IPPROTO_IP		0	IP协议
+ *	IPPROTO_IPV4	4	IPV4
+ *	IPPROTO_TPV6	41	IPV6
+ *	IPPROTO_TCP		6	TCP
+ *	IPPROTO_UDP		17	UDP
+ *
+ *	可以使用hint来过滤上面的结构体，仅使用ai_family、ai_flags、ai_protocol和ai_socktype字段
+ *	剩余的整数字段必须设置为零，并且指针字段为空。
+ *
  * hostname:一个主机名或者地址串(IPv4的点分十进制串或者IPv6的16进制串)
  * service：服务名可以是十进制的端口号，也可以是已定义的服务名称，如ftp、http等
  * hints：可以是一个空指针，也可以是一个指向某个addrinfo结构体的指针，调用者在这个结构中填入关于期望返回的信息类型的暗示。
  * 举例来说：如果指定的服务既支持TCP也支持UDP
  * 那么调用者可以把hints结构中的ai_socktype成员设置成SOCK_DGRAM使得返回的仅仅是适用于数据报套接口的信息。
  * result：本函数通过result指针参数返回一个指向addrinfo结构体链表的指针。
+ * 
+ * 在getaddrinfo函数之前通常需要对以下6个参数进行以下设置：hostname、service、hints的ai_flags、ai_family、ai_socktype、ai_protocol。
+ * 在6项参数中，对函数影响最大的是nodename，sername和hints.ai_flag，而ai_family只是有地址为v4地址或v6地址的区别。ai_protocol一般是为0不作改动。 
+ * 一般情况下，client/server编程中，server端调用bind（如果面向连接的还需要listen）
+ * client则不用调用bind函数，解析地址后直接connect（面向连接）或直接发送数据（无连接）
+ *	- 通常服务器端在调用getaddrinfo之前，ai_flags设置AI_PASSIVE，用于bind；主机名hostname通常会设置为NULL，返回通配地址[::]
+ *	- 客户端调用getaddrinfo时，ai_flags一般不设置AI_PASSIVE，但是主机名hostname和服务名service(更愿意称之为端口)则应该不为空
+ *	- 使不设置AI_PASSIVE，取出的地址也并非不可以被bind，很多程序中ai_flags直接设置为0
+ *	  即3个标志位都不设置，这种情况下只要hostname和service设置的没有问题就可以正确bind。
+ * 
  * 由getaddrinfo返回的所有存储空间都是动态获取的，这些存储空间必须通过调用freeaddrinfo返回给系统。
  * gai_strerror用来获取getaddrinfo接口返回的错误码对应的错误信息，注意getaddrinfo不是设置errno
+ * 
  * 返回值：0——成功，非0——出错
- * getaddrinfo解决了把主机名和服务名转换成套接口地址结构的问题。
+ * 果本函数返回成功，那么由result参数指向的变量已被填入一个指针.它指向的是由其中的ai_next成员串联起来的addrinfo结构链表
+ * 可以导致返回多个addrinfo结构的情形有以下2个：
+ *	- 如果与hostname参数关联的地址有多个，那么适用于所请求地址簇的每个地址都返回一个对应的结构
+ *	- 如果service参数指定的服务支持多个套接口类型，那么每个套接口类型都可能返回一个对应的结构，具体取决于hints结构的ai_socktype成员
+ * 我们必须先分配一个hints结构，把它清零后填写需要的字段，再调用getaddrinfo，然后遍历一个链表逐个尝试每个返回地址
  */
 void Getaddrinfo(const char *hostname, const char *service, const struct addrinfo *hints, struct addrinfo **result)
 {
@@ -789,6 +857,31 @@ void Getaddrinfo(const char *hostname, const char *service, const struct addrinf
 	}
 }
 
+/*
+ * 是getaddrinfo的互补函数，以一个套接字地址为参数，返回描述其中的主机的一个字符串和描述其中的服务的另一个字符串
+ * 它以与协议无关的方式将套接字地址转换为相应的主机和服务。
+ * getnameinfo()是可重入的，允许程序消除IPv4-vs-IPv6依赖关系
+ *
+ *  sa参数是指向保存输入IP地址和端口号的salen大小的通用套接字地址结构(类型为sockaddr_in或sockaddr_in6)的指针
+ *  参数host和serv是指向调用者分配的缓冲区(分别为hostlen和servlen大小)的指针，其中getnameinfo()分别放置包含主机和服务名称的以空结尾的字符串。
+ *  调用方可以通过提供NULL的host(或serv)参数或0的hostlen(或servlen)参数来指定不需要主机名(或服务名)。
+ *  但是，必须请求至少一个主机名或服务名称。
+ *  flags参数修改getnameinfo的行为
+ *  +=======================+===========================================+
+ *  |	NI_DGRAM			|	数据报服务								|					
+ *  +-----------------------+-------------------------------------------+
+ *  |	NI_NAMEREQD			|	若不能从地址解析出名字则返回错误		|					
+ *  +-----------------------+-------------------------------------------+
+ *  |	NI_NIFQDN			|	只能返回NQDN的主机字符串				|					
+ *  +-----------------------+-------------------------------------------+
+ *  |	NI_NUMERICHOST		|	以数串格式返回主机字符串				|					
+ *  +-----------------------+-------------------------------------------+
+ *  |	NI_NUMERICSCOPE		|	以数串格式返回范围标识字符串			|					
+ *  +-----------------------+-------------------------------------------+
+ *  |	NI_NUMERICSERV		|	以数串格式返回服务字符串				|
+ *  +-----------------------+-------------------------------------------+
+ *  在成功时返回0，如果请求，节点和服务名称将填充以空结尾的字符串，可能会截断以适应指定的缓冲区长度
+ */
 void Getnameinfo(const struct sockaddr *sa, socklen_t salen, char *host, size_t hostlen, char *serv, size_t servlen, int flags)
 {
 	int rc;
@@ -800,28 +893,62 @@ void Getnameinfo(const struct sockaddr *sa, socklen_t salen, char *host, size_t 
 /*
  * freeaddrinfo接口用来释放getaddrinfo接口返回的res指向的链表
  * 如果调用getaddrinfo接口后没有释放内存，会造成内存泄露，所以一定要记得调用这个接口来释放内存
+ * void freeaddrinfo( struct addrinfo *result );
+ * result参数应指向由getaddrinfo返回的第一个addrinfo结构。这个连表中的所有结构以及它们指向的任何动态存储空间都被释放掉
  */
 void Freeaddrinfo(struct addrinfo *result)
 {
 	freeaddrinfo(result);
 }
 
-void Inet_ntop(int af, const void *src, char *dst, socklen_t size)
+/*
+ * 这两个函数是随IPv6出现的函数，对于IPv4地址和IPv6地址都适用
+ * 函数中p和n分别代表表达（presentation)和数值（numeric)。地址的表达格式通常是ASCII字符串，数值格式则是存放到套接字地址结构的二进制值。
+ * 这两个函数的family参数既可以是AF_INET（ipv4）也可以是AF_INET6（ipv6）
+ * 如果，以不被支持的地址族作为family参数，这两个函数都返回一个错误，并将errno置为EAFNOSUPPORT.
+ *
+ * inet_pton()函数尝试转换由strptr指针所指向的字符串，并通过addrptr指针存放二进制结果
+ * 若成功则返回值为1，否则如果所指定的family而言输入字符串不是有效的表达式格式，那么返回值为0.
+ */
+void Inet_pton(int family, const char *strptr, void *addrptr)
 {
-	if (!inet_ntop(af, src, dst, size)) {
-		unix_error("inet_ntop error");
-	}
-}
-
-void Inet_pton(int af, const char *src, void *dst)
-{
-	int rc = inet_pton(af, src, dst);
+	int rc = inet_pton(family, strptr, addrptr);
 	if (rc == 0) {
 		app_error("inet_pton error: invalid dotted-decimal address");
 	}else if (rc < 0) {
 		unix_error("inet_pton error");
 	}
 }
+
+/*
+ * 实现 inet_ntoa()对ipv6的支持
+ * inet_ntop()进行相反的转换，从数值格式（addrptr）转换到表达式（strptr)。
+ * inet_ntop函数的strptr参数不可以是一个空指针。调用者必须为目标存储单元分配内存并指定其大小，调用成功时，这个指针就是该函数的返回值。
+ * len参数是目标存储单元的大小，以免该函数溢出其调用者的缓冲区。如果len太小，不足以容纳表达式结果，那么返回一个空指针，并置为errno为ENOSPC。
+ */
+void Inet_ntop(int family, const void *addrptr, char *strptr, socklen_t len)
+{
+	if (!inet_ntop(family, src, dst, len)) {
+		unix_error("inet_ntop error");
+	}
+}
+
+
+/*
+ * 将域名或者主机名转换为ip地址保存在hostent结构体中
+ * 客户端中直接使用 IP 地址会有很大的弊端，一旦 IP 地址变化(IP 地址会经常变动)，客户端软件就会出现错误。
+ * 而使用域名会方便很多，注册后的域名只要每年续费就永远属于自己的，更换 IP 地址时修改域名解析即可，不会影响软件的正常使用
+ * 域名仅仅是 IP 地址的一个助记符，目的是方便记忆，通过域名并不能找到目标计算机，通信之前必须要将域名转换成 IP 地址
+ *
+ *	struct hostent{
+ *		char *h_name;    //正式主机名
+ *		char **h_aliases;  //主机别名
+ *		int h_addrtype;  //主机ip地址类型 AF_INET AF_INET6
+ *		int h_length;    //主机ip地址长度，对应的IPV4 是 4， 即32位 IPV6是16
+ *		char **h_addr_list;  //主机ip地址列表
+ *	};
+ *
+ */ 
 struct hostent *Gethostbyname(const char *name)
 {
 	struct hostent *he;
@@ -831,6 +958,12 @@ struct hostent *Gethostbyname(const char *name)
 	return he;
 }
 
+/*
+ * 通过一个IPv4的地址来获取主机信息，并放在hostent结构体中
+ * addr是ip地址，但需要通过inet_aton()转换为网络字节序的32位二进制数
+ * len是ip地址长度 4 / 6
+ * type 族 AF_INET / AF_INET6
+ */
 struct hostent *Gethostbyaddr(const char *addr, int len, int type)
 {
 	struct hostent *he;
@@ -839,6 +972,9 @@ struct hostent *Gethostbyaddr(const char *addr, int len, int type)
 	}
 	return he;
 }
+
+
+
 void Pthread_create(pthread_t *pid, pthread_attr_t *pattr, void *(*handler)(void *), void *arg)
 {
 	int rc;
@@ -918,44 +1054,9 @@ void V(sem_t *sem)
 	}
 }
 
-ssize_t Rio_readn(int fd, void *ptr, size_t n)
-{
-	ssize_t rc;
-	if ((rc = rio_readn(fd, ptr, n)) < 0) {
-		unix_error("rio_readn errpr");
-	}
-	return rc;
-}
-
-void Rio_writen(int fd, void *usrbuf, size_t n)
-{
-	if (rio_writen(fd, usrbuf, n) != n) {
-		unix_error("rio_writen error");
-	}
-}
-
-void Rio_readinitb(rio_t *pr, int fd)
-{
-	rio_readinitb(pr, fd);
-}
-
-ssize_t Rio_readnb(rio_t *pr, void *usrbuf, size_t n)
-{
-	ssize_t rc;
-	if ((rc = rio_readnb(pr, usrbuf, n)) < 0) {
-		unix_error("rio_readnb error");
-	}
-	return rc;
-}
-
-ssize_t Rio_readlineb(rio_t *pr, void *usrbuf, size_t maxlen)
-{
-	ssize_t rc;
-	if ((rc = rio_readlineb(pr, usrbuf, maxlen)) <0) {
-		unix_error("readlineb error");
-	}
-	return rc;
-}
+/*
+ * 传入一个主机名和端口号 返回相应的可用sockfd
+ */
 
 int open_client(char *hostname, char *port)
 {
@@ -984,6 +1085,18 @@ int open_client(char *hostname, char *port)
 	return clientfd;
 }
 
+/*
+ * 通过传入参数port返回一个可以监听的sock套接字
+ * 
+ * 调用getaddrinfo()函数获得对应端口的返回地址
+ * ai_flags设置AI_PASSIVE，(套接字地址用于监听绑定) 用于bind；主机名hostname通常会设置为NULL，返回通配地址[::]
+ * ai_flags配置 AI_NUMERICSERV 以服务器返回端口号 配置AI_ADDRCONFIG查询配置地址类型
+ * 将对应获得的每一个返回的地址和端口调用socket()获取套接字
+ * setsockopt()通知内核，重用端口
+ * bind() bind对应的addr在套接字上
+ * listen() 进入listen状态
+ *
+ */
 int open_listenfd(const char *port)
 {
 	struct addrinfo hints, *plist, *p;
@@ -994,6 +1107,7 @@ int open_listenfd(const char *port)
 	hints.ai_flags = AI_PASSIVE;
 	hints.ai_flags |= AI_NUMERICSERV;
 	hints.ai_flags |= AI_ADDRCONFIG;
+	Getaddrinfo(NULL, port, &hints, &plist);
 
 	for (p = plist; p != NULL; p = p->ai_next) {
 		if ((listenfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) < 0) {

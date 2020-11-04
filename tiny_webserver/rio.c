@@ -1,5 +1,4 @@
 #include "rio.h"
-
 /*
  * 从fd中读取n个字节到buf 返回读取的字节数 出错时返回-1
  * 实现中使用了nleft变量来循环读取 直到读取到nletf为0或者无数据可读取时返回
@@ -145,4 +144,42 @@ ssize_t rio_readnb(rio_t *rp, void *buf, size_t n)
 	return (n - nleft);
 }
 
+ssize_t Rio_readn(int fd, void *ptr, size_t n)
+{
+	ssize_t rc;
+	if ((rc = rio_readn(fd, ptr, n)) < 0) {
+		unix_error("rio_readn errpr");
+	}
+	return rc;
+}
+
+void Rio_writen(int fd, void *usrbuf, size_t n)
+{
+	if (rio_writen(fd, usrbuf, n) != n) {
+		unix_error("rio_writen error");
+	}
+}
+
+void Rio_readinitb(rio_t *pr, int fd)
+{
+	rio_readinitb(pr, fd);
+}
+
+ssize_t Rio_readnb(rio_t *pr, void *usrbuf, size_t n)
+{
+	ssize_t rc;
+	if ((rc = rio_readnb(pr, usrbuf, n)) < 0) {
+		unix_error("rio_readnb error");
+	}
+	return rc;
+}
+
+ssize_t Rio_readlineb(rio_t *pr, void *usrbuf, size_t maxlen)
+{
+	ssize_t rc;
+	if ((rc = rio_readlineb(pr, usrbuf, maxlen)) <0) {
+		unix_error("readlineb error");
+	}
+	return rc;
+}
 

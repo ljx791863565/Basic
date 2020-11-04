@@ -24,7 +24,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "rio.h"
+#include <err.h>
 // define mode rw_ rw_ rw_
 #define DEF_MODE	S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH
 // define mode mask ___ _w_ _w_
@@ -37,13 +37,13 @@ extern char **environ;
 #define MAXBUF	8192
 #define	LISTENQ 1024
 
-//error-handling functions
+/*
 void unix_error(char *msg);
 void posix_error(int code, char *msg);
 void dns_error(char *msg);
 void gai_error(int code, char *msg);
 void app_error(char *msg);
-
+*/
 //process control wrappers
 pid_t Fork();
 void Execve(const char *filename, char *const argv[], char *const envp[]);
@@ -139,13 +139,6 @@ void Pthread_detach(pthread_t pid);
 void Pthread_exit(void *retval);
 pthread_t Pthread_self(void);
 void Pthread_once(pthread_once_t *once_control, void(*init_fanction)());
-
-//wrappers for robust I/O routines
-ssize_t Rio_readn(int fd, void *ptr, size_t n);
-void Rio_writen(int fd, void *usrbuf, size_t n);
-void Rio_readinitb(rio_t *pr, int fd);
-ssize_t Rio_readnb(rio_t *pr, void *usrbuf, size_t n);
-ssize_t Rio_readlineb(rio_t *pr, void *usrbuf, size_t maxlen);
 
 //POSIX semaphore wrappers
 void Sem_init(sem_t *sem, int pshared, unsigned int value);
