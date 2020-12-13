@@ -34,5 +34,10 @@ int main(int argc, const char *argv[])
 
 	std::cout << (t2 - t1).count() << " tick count" << std::endl;
 	std::cout << duration_cast<nanoseconds>(t2-t1).count() << " nanoseconds" << std::endl;
+
+	auto t = system_clock::to_time_t(system_clock::now());
+	std::cout << std::put_time(std::localtime(&t), "%Y-%m-%d %X") <<std::endl;
+	std::cout << std::put_time(std::localtime(&t), "%Y-%m-%d %H:%M:%S") << std::endl;
+	
 	return 0;
 }

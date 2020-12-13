@@ -35,21 +35,23 @@ int main(int argc, const char *argv[])
 	static int nLocalStatic2;
 	int nLocal = 100;
 	int nLocal2;
+
+	//const修饰局部变量是一个只读变量，其必须赋值否则无法通过编译
 	const int nLocalConst = 100;
 	const int nLocalConst2 = 200;
 
 	int *pNew = new int [5];
 	char *pMalloc = (char *)malloc(5);
 	
-	printf("Global variable: %d 0x%x ;%d 0x%x\n",nGlobal, &nGlobal, nGlobal2, &nGlobal2);
-	printf("Golbal static variable: %d 0x%x; %d 0x%x\n", nGlocalStatic, &nGlocalStatic, nGlocalStatci2, &nGlocalStatci2);
+	printf("Global variable - nGlobal: %d 0x%x; - nGlobal2:%d 0x%x\n",nGlobal, &nGlobal, nGlobal2, &nGlobal2);
+	printf("Golbal static variable - nGlocalStatic : %d 0x%x; - nGlocalStatci2: %d 0x%x\n", nGlocalStatic, &nGlocalStatic, nGlocalStatci2, &nGlocalStatci2);
 	
-	printf("local expression: 0x%x\n", pLocalString1);
-	printf("const local expression: 0x%x\n", pLocalString2);
+	printf("local expression -pLocalString1: 0x%x, 0x%x\n", pLocalString1, &pLocalString1);
+	printf("const local expression -pLocalString2: 0x%x, 0x%x\n", pLocalString2, &pLocalString2);
 
-	printf("local variable: %d 0x%x; %d 0x%x\n", nLocal, &nLocal, nLocal2, &nLocal2);
-	printf("local static variable: %d 0x%x; %d 0x%x\n", nLocalStatic, &nLocalStatic, nLocalStatic2, &nLocalStatic2);
-	printf("local const variable: %d 0x%x; %d 0x%x\n", nLocalConst, &nLocalConst, nLocalConst2, &nLocalConst2);
+	printf("local variable -nLocal: %d 0x%x; - nLocal2: %d 0x%x\n", nLocal, &nLocal, nLocal2, &nLocal2);
+	printf("local static variable - nLocalStatic: %d 0x%x; - nLocalStatic2:%d 0x%x\n", nLocalStatic, &nLocalStatic, nLocalStatic2, &nLocalStatic2);
+	printf("local const variable - nLocalConst: %d 0x%x; - nLocalConst2:%d 0x%x\n", nLocalConst, &nLocalConst, nLocalConst2, &nLocalConst2);
 
 	printf("pNew : 0x%x 0x%x\n", pNew, &pNew);
 	printf("pMalloc: 0x%x 0x%x\n", pMalloc, &pMalloc);
