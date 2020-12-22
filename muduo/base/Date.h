@@ -1,6 +1,8 @@
 #ifndef DATE_H
 #define DATE_H
 
+
+//时间类
 #include "Copyable.h"
 #include "Types.h"
 
@@ -15,6 +17,7 @@ public:
 		int month;
 		int day;
 	};
+	//每周天数 static const类型 整个类只有一份且共享给每一个类的实例
 	static const int kDaysPerWeek = 7;
 	static const int kJulianDayOf1970_01_01;
 
@@ -57,6 +60,7 @@ public:
 		return yearMonthDay().day;
 	}
 
+	// [ 0 , 1, .., 6 ] ==> [ sunday, monday, ..., saturday ]
 	int weekDay() const
 	{
 		return (julianDayNumber_+1) % kDaysPerWeek;

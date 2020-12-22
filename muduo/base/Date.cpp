@@ -11,6 +11,8 @@ namespace muduo
 namespace detail
 {
 
+//这里比较int和int32_t大小 
+//int32_t: typedef signed int;
 char require_32_bit_integer_at_least[sizeof(int) >= sizeof(int32_t) ? 1 : -1];
 
 // algorithm and explanation see:

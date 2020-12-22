@@ -8,6 +8,10 @@ namespace muduo {
 class TimeZone;
 class Logger {
 public:
+	/*
+	 * 在没有显示说明的情况下，枚举常量（也就是花括号中的常量名）
+	 * 默认第一个枚举常量的值为0，往后每个枚举常量依次递增1
+	 */
 	enum LogLevel
 	{ 
 		TRACE,

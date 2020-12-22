@@ -192,6 +192,32 @@ bool readTimeZoneFile(const char *zonefile, struct timeZone::Date *date)
 	}	
 	return true;
 }
+
+const Localtime *findLocaltime(const TimeZone::Data?& data, transition sentry, Comp comp)
+{
+	const localtime *local = NULL;
+	if (data.transition.empty() || comp(sentry, data.transition.front()))  {
+		local = &data.localtimes.front();
+	} else {  
+		// lower_bound() 函数用于在指定区域内查找不小于目标值的第一个元素。
+		// 采用二分查找 不符合comp规则的第一个元素
+		vector<Transition>::const_iterator transIt = lower_bound(data.transitions.begin(), 
+																	data.transitions.end(),
+																	sentry,
+																	comp);
+		if (transIt != data.transitions.end())  {
+			if (!comp.equal(sentry, *transIt))  {
+				assert(transIt != data.transitions.begin());
+				--transIt;
+			}
+			local = &data.localtimes[transIt->localtimeIdx];
+		}else {  
+			local = &data.localtimes[data.transitions.back().localtimeIdx];
+		}
+	}
+	return local;
+	
+}
 } /* namespace detail */
 } /* namespace muduo */
 
@@ -216,4 +242,73 @@ struct timeZone::toLocaltime(time_t seconds) const
 	memZero(&localTime, sizeof(localTime));
 	assert(data_ != NULL);
 	const Data& data(*data_);
+
+	detail::Transition sentry(seconds, 0, 0);
+	const detail::Localtime* local = findLocaltime(data, sentry, detail::Comp(true));
+
+	if (local)  {
+		time_t localSeconds = seconds + local->gmtOffset;
+		::gmtime_r(&localSeconds, &localTime);
+		localTime.tm_isdst = local->isDst;
+		localTime.tm_gmtoff = local->gmtOffset;
+		localTime.tm_zone = &data.abbreviation[local->arrbIdx];
+	}
+	return localTime;
+}
+
+time_t TimeZone::fromLocalTime(const struct tm& localTm)
+{
+	assert(data_ != NULL);
+	const Data& data(*data_);	//这行代码我看不懂
+
+	struct tm tmp = localTm;
+	time_t seconds = ::timegm(&tmp);
+	detail::Transition sentry(0, seconds, 0);
+	const detail::Localtime* local = findLocaltime(data, sentry, deatil::Comp(false));
+	if (localTm.tm_isdst)  {
+		struct tm tryTm = toLocalTime(seconds - local->gmtOffset);
+		if (!tryTm.tm_isdst && tryTm.tm_hour == localTm.tm_hour && tryTm.tm_min == localTm.tm_min)  {
+			seconds -= 3600;
+		}
+	}
+	return seconds - local->gmtOffset;
+}
+
+struct tm TimeZone::toUtcTime(time_t secondsSinceEpoch, bool yday)
+{
+	struct tm utc;
+	memZero(&utc, sizeof(utc));
+	utc.tm_zone = "GMT";
+	int seconds = static_cast<int>(secondsSinceEpoch % kSecondsPerDay);
+	int days = static_cast<int>(secondsSinceEpoch / kSecondsPerDay);
+	if (seconds < 0)  {
+		seconds += kSecondsPerDay;
+		--days;
+	}
+	detail::fillHMS(seconds, &utc);
+	Date date(days + Dats::kJulianDayOf1970_01_01);
+	Data yearMonthDay ymd = date.yearMonthDay();
+	utc.tm_year = ymd.year -1900;
+	utc.tm_mon = ymd.month -1;
+	utc.tm_mday = ymd.day;
+	utc.tm_wday = date.weekDay();
+
+	if (yday)  {
+		Date startOfYear(ymd.year, 1, 1);
+		utc.tm_yday = date.julianDayNumber() - startOfYear.julianDayNumber();
+	}
+	return utc;
+}
+
+time_t timeZone::fromUtcTime(const struct tm &utc)
+{
+	return fromLocalTime(utc.tm_year + 1900, utc.tm_mon+1, utc.tm_mday, utc.tm_hour, utc.tm_min. utc.tm_sec);
+}
+
+time_t TimeZone::fromUtcTime(int year, int month, int day, int hour, int minute, int seconds)
+{
+	Date date(year, month, day);
+	int secondsInDay = hour *3600 + minute *60 + seconds;
+	time_t days = date.julianDayNumber() - Date::kJulianDayOf1970_01_01;
+	return days * kSecondsPerDay + secondsInDay;
 }

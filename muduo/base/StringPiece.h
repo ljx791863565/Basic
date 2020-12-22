@@ -5,7 +5,7 @@
 #include <iosfwd>
 #include "Types.h"
 
-namespace nuduo {
+namespace muduo {
 class StringArg
 {
 public:
@@ -26,7 +26,7 @@ private:
 class StringPiece {
 public:
 	StringPiece ()
-		:ptr_(NULL), length(0)
+		:ptr_(NULL), length_(0)
 	{}
 	StringPiece(const char *str)
 		:ptr_(str), length_(static_cast<int>(strlen(ptr_)))
@@ -34,7 +34,7 @@ public:
 	StringPiece(const unsigned char *str)
 		:ptr_(reinterpret_cast<const char *>(str)), length_(static_cast<int>(strlen(ptr_)))
 	{}
-	StringPiece(const string& s)
+	StringPiece(const std::string& s)
 		:ptr_(s.data()), length_(static_cast<int>(s.size()))
 	{}
 	StringPiece(const char *offset, int len)
@@ -86,7 +86,7 @@ public:
 
 	void set(const void *buffer, int len)
 	{
-		ptr_ = reinterpret_cast<const char*>buffer;
+		ptr_ = reinterpret_cast<const char*>(buffer);
 		length_ = len;
 	}
 	
@@ -108,7 +108,7 @@ public:
 
 	bool operator==(const StringPiece &s) const
 	{
-		return (length_ == s.length_) && (memcmp(ptr_, s.ptr, length_) == 0);
+		return (length_ == s.length_) && (memcmp(ptr_, s.ptr_, length_) == 0);
 	}
 
 	bool operator!=(const StringPiece &s) const
@@ -118,7 +118,7 @@ public:
 
 #define STRINGPIECE_BINARY_PREDICATE(cmp, auxcmp)				\
 	bool operator cmp(const StringPiece &s) const {				\
-		int r = memcmp(ptr_, s.ptr_, length_ < s.length_ ? length_ : s.length_) \
+		int r = memcmp(ptr_, s.ptr_, length_ < s.length_ ? length_ : s.length_); \
 		return ((r auxcmp 0) || ((r == 0) && (length_ cmp s.length_)));			\
 	}
 	STRINGPIECE_BINARY_PREDICATE(<, <);
@@ -140,20 +140,20 @@ public:
 		return r;
 	}
 
-	string as_string() const
+	std::string as_string() const
 	{
-		return string(data(), size());
+		return std::string(data(), size());
 	}
 
 	// 先将原字符串清空，然后赋予新的值作替换
-	void CopyToString(string * target) const
+	void CopyToString(std::string *target) const
 	{
 		target->assign(ptr_, length_);
 	}
 
 	bool starts_with(const StringPiece &s) const
 	{
-		return ((length_ >= s.length) && (memcmp(ptr_, s.ptr_, s.length_) == 0));
+		return ((length_ >= s.length_) && (memcmp(ptr_, s.ptr_, s.length_) == 0));
 	}
 private:
 	const char *ptr_;
@@ -171,7 +171,7 @@ template<> struct __type_treits<muduo::StringPiece>
 };
 #endif
 
-std::ostream& operator<<(std::ostream& o, const muduo::StringPiece& piece);
+std::ostream& operator<<(std::ostream& o, const muduo::StringPiece &piece);
 
 } /* namespace nuduo */
 #endif /* end of :MUDUO_STRING_PIEXE_H */

@@ -11,6 +11,8 @@
 #endif
 
 namespace muduo {
+//仅仅引用std::string而不是全部的std 尽量减少std对公共空间的污染
+//这个using表明只在引用了这个头文件和muduo类中可以直接使用string省略掉std::string
 using std::string;
 
 inline void memZero(void *p, size_t n)
