@@ -22,5 +22,23 @@ int main(int argc, const char *argv[])
 	int d = 12;
 	v.push_back(&d);
 	display(v);
+
+
+	vector<char> buffer;
+	buffer.push_back('h');
+	buffer.push_back('e');
+	buffer.push_back('l');
+	buffer.push_back('l');
+	buffer.push_back('o');
+	buffer.push_back('w');
+	buffer.push_back('o');
+	buffer.push_back('e');
+	buffer.push_back('l');
+	buffer.push_back('d');
+	buffer.push_back('!');
+	buffer.push_back('\n');
+	for (auto it = buffer.begin(); it < buffer.end(); ++it) {
+		cout << *it;
+	}
 	return 0;
 }
