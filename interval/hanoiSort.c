@@ -1,5 +1,11 @@
 #include <stdio.h>
+/*
+ * 汉诺塔思路：想象一个数组从0-n下标，数组元素大小表示塔的大小，每次只能拿出需要的塔位置及以上全部的塔
+ * 拿出后只能做翻转后全部放回或者不操作全部放回
+ * 需要使得该塔从下标开始从大到小排序
+ */
 
+//拿出后翻转
 void turn(int *array, int n)
 {
 	int *p1 = array;
@@ -13,6 +19,7 @@ void turn(int *array, int n)
 	}
 }
 
+//找出塔的最长大小的下标
 int searchMax(int *array, int n)
 {
 	int index = 0;
