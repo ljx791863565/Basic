@@ -11,6 +11,7 @@ void display(vector<int* > &a)
 	}
 }
 
+
 int main(int argc, const char *argv[])
 {
 	int a = 1; 
@@ -40,5 +41,6 @@ int main(int argc, const char *argv[])
 	for (auto it = buffer.begin(); it < buffer.end(); ++it) {
 		cout << *it;
 	}
+
 	return 0;
 }

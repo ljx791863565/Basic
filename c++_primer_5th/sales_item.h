@@ -1,103 +1,143 @@
-#ifndef __SALES_ITEM_H__
-#define __SALES_ITEM_H__
+/*
+ * This file contains code from "C++ Primer, Fifth Edition", by Stanley B.
+ * Lippman, Josee Lajoie, and Barbara E. Moo, and is covered under the
+ * copyright and warranty notices given in that book:
+ * 
+ * "Copyright (c) 2013 by Objectwrite, Inc., Josee Lajoie, and Barbara E. Moo."
+ * 
+ * 
+ * "The authors and publisher have taken care in the preparation of this book,
+ * but make no expressed or implied warranty of any kind and assume no
+ * responsibility for errors or omissions. No liability is assumed for
+ * incidental or consequential damages in connection with or arising out of the
+ * use of the information or programs contained herein."
+ * 
+ * Permission is granted for this code to be used for educational purposes in
+ * association with the book, given proper citation if and when posted or
+ * reproduced.Any commercial use of this code requires the explicit written
+ * permission of the publisher, Addison-Wesley Professional, a division of
+ * Pearson Education, Inc. Send your request for permission, stating clearly
+ * what code you would like to use, and in what specific way, to the following
+ * address: 
+ * 
+ *     Pearson Education, Inc.
+ *     Rights and Permissions Department
+ *     One Lake Street
+ *     Upper Saddle River, NJ  07458
+ *     Fax: (201) 236-3290
+*/ 
 
+/* This file defines the Sales_item class used in chapter 1.
+ * The code used in this file will be explained in
+ * Chapter 7 (Classes) and Chapter 14 (Overloaded Operators)
+ * Readers shouldn't try to understand the code in this file
+ * until they have read those chapters.
+*/
+
+#ifndef SALESITEM_H
+// we're here only if SALESITEM_H has not yet been defined 
+#define SALESITEM_H
+
+// Definition of Sales_item class and related functions goes here
 #include <iostream>
 #include <string>
 
-class Sales_item 
-{
+class Sales_item {
+// these declarations are explained section 7.2.1, p. 270 
+// and in chapter 14, pages 557, 558, 561
 friend std::istream& operator>>(std::istream&, Sales_item&);
 friend std::ostream& operator<<(std::ostream&, const Sales_item&);
 friend bool operator<(const Sales_item&, const Sales_item&);
-friend bool operator==(const Sales_item&, const Sales_item&);
-
+friend bool 
+operator==(const Sales_item&, const Sales_item&);
 public:
-	Sales_item()
-		:units_sold(0), revenue(0.0)
-	{}
-
-	Sales_item(const std::string &book)
-		:bookNo(book), units_sold(0), revenue(0.0)
-	{}
-
-	Sales_item(std::istream &is)
-	{
-		is >> *this;
-	}
+    // constructors are explained in section 7.1.4, pages 262 - 265
+    // default constructor needed to initialize members of built-in type
+    Sales_item(): units_sold(0), revenue(0.0) { }
+    Sales_item(const std::string &book): 
+                  bookNo(book), units_sold(0), revenue(0.0) { }
+    Sales_item(std::istream &is) { is >> *this; }
 public:
-	Sales_item& operator+=(const Sales_item&);
-	std::string isbn() const
-	{
-		return bookNo;
-	}
-	double argv_price() const;
+    // operations on Sales_item objects
+    // member binary operator: left-hand operand bound to implicit this pointer
+    Sales_item& operator+=(const Sales_item&);
+    
+    // operations on Sales_item objects
+    std::string isbn() const { return bookNo; }
+    double avg_price() const;
+// private members as before
 private:
-	std::string bookNo;
-	unsigned units_sold;
-	double revenue;
+    std::string bookNo;      // implicitly initialized to the empty string
+    unsigned units_sold;
+    double revenue;
 };
 
-inline bool compareIsbn(const Sales_item &lhs, const Sales_item &rhs)
-{
-	return lhs.isbn() == rhs.isbn();
-}
+// used in chapter 10
+inline
+bool compareIsbn(const Sales_item &lhs, const Sales_item &rhs) 
+{ return lhs.isbn() == rhs.isbn(); }
 
+// nonmember binary operator: must declare a parameter for each operand
 Sales_item operator+(const Sales_item&, const Sales_item&);
 
-inline bool operator==(const Sales_item &lhs, const Sales_item &rhs)
+inline bool 
+operator==(const Sales_item &lhs, const Sales_item &rhs)
 {
-	return lhs.units_sold == rhs.units_sold 
-		&& lhs.revenue == rhs.revenue
-		&& lhs.isbn() == rhs.isbn();
+    // must be made a friend of Sales_item
+    return lhs.units_sold == rhs.units_sold &&
+           lhs.revenue == rhs.revenue &&
+           lhs.isbn() == rhs.isbn();
 }
 
-inline bool operator!=(const Sales_item &lhs, const Slaes_item &rhs)
+inline bool 
+operator!=(const Sales_item &lhs, const Sales_item &rhs)
 {
-	return !(lhs == rhs);
+    return !(lhs == rhs); // != defined in terms of operator==
 }
 
-//这个操作必须先确定两个对象的isbn()是一样的相加才有意义
-Sales_item& Sales_item::operator+=(const Sales_item &rhs)
+// assumes that both objects refer to the same ISBN
+Sales_item& Sales_item::operator+=(const Sales_item& rhs) 
 {
-	units_sold += rhs.units_sold;
-	revenue += rhs.revenue;
-	return *this;
+    units_sold += rhs.units_sold; 
+    revenue += rhs.revenue; 
+    return *this;
 }
 
-//FIXME：用已实现的+=操作函数来实现+操作函数可以优化掉程序生成的临时变量
-Sales_item operator+(const Sales_item &lhs, const Sales_item &rhs)
+// assumes that both objects refer to the same ISBN
+Sales_item 
+operator+(const Sales_item& lhs, const Sales_item& rhs) 
 {
-	Sales_item ret(lhs);
-	ret += rhs;
-	return ret;
+    Sales_item ret(lhs);  // copy (|lhs|) into a local object that we'll return
+    ret += rhs;           // add in the contents of (|rhs|) 
+    return ret;           // return (|ret|) by value
 }
 
-std::istream& operator>>(std::istream &in, Sales_item &s)
+std::istream& 
+operator>>(std::istream& in, Sales_item& s)
 {
-	double price;
-	//输入时流的顺序分别是 ISBN 数量 单价
-	in >> s.bookNo >> s.units_sold >> price;
-	if (in)  {
-		s.revenue = s.units_sold * price;
-	} else {
-		s = Sales_item();
-	}
-
-	return in;
+    double price;
+    in >> s.bookNo >> s.units_sold >> price;
+    // check that the inputs succeeded
+    if (in)
+        s.revenue = s.units_sold * price;
+    else 
+        s = Sales_item();  // input failed: reset object to default state
+    return in;
 }
 
-std::ostream& operator<<(std::ostream &out, const Sales_item &s)
+std::ostream& 
+operator<<(std::ostream& out, const Sales_item& s)
 {
-	out << s.isbn() << " " << s.units_sold << " " << s.revenue << s.avg_price();
-	return out;
+    out << s.isbn() << " " << s.units_sold << " "
+        << s.revenue << " " << s.avg_price();
+    return out;
 }
 
-double Sales_item::arg_price() const
+double Sales_item::avg_price() const
 {
-	if (units_sold)  {
-		return revenue / units_sold;
-	}else {
-		return 0;
-	}
+    if (units_sold) 
+        return revenue/units_sold; 
+    else 
+        return 0;
 }
-#endif /* end of :__SALES_ITEM_H__ */
+#endif
