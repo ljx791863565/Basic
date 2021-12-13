@@ -42,6 +42,12 @@ private:
 	}
 };
 
+class A {
+public:
+	int a_;
+	void mem_func(void)
+	{}
+};
 int main()
 {
 	// 函数不是可调用的类型

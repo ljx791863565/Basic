@@ -1,0 +1,34 @@
+ifndef CC
+CC=gcc
+endif
+
+ifndef CFLAGS
+CFLAGS = -MMD -O2 -Wall -g -std=c99
+endif
+
+CFLAGS += -I.. -I../utils
+
+# quiet 和 Q 来控制编译的时候是否在终端输出完整的命令
+# 定义了V时 即 make V=1 Q为空
+Q=@
+E=echo
+ifeq ($(V), 1)
+Q=
+E=true
+endif
+
+ifeq ($(QUIEF), 1)
+Q=@
+E=true
+endif 
+
+#  % 类比于正则* %o: %c 表示对于所有的.o目标 依赖时所有对应的.c文件
+# 使命令在被执行前不被回显
+# $< 表示第一个依赖文件
+# $^ 表示所有的依赖文件
+# $@ 表示目标文件
+# $% 仅当目标是函数库文件中，表示规则中的目标成员名。
+# 例如，如果一个目标是“foo.a(bar.o)”，那么，“$%”就是“bar.o”，“$@”就是“foo.a”。如果目标不是函数库文件（Unix下是[.a]，Windows下是[.lib]），那么，其值为空
+%.o: %.c 
+    $(Q)$(CC) -c -o $@ $(CFLAGS) $<
+    @$(E) " CC "' $<
